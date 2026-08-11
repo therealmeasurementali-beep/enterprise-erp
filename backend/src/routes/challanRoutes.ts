@@ -9,14 +9,15 @@ const router = express.Router();
 // All challan routes require authentication
 router.use(auth);
 
-// RBAC: Admin and Sales can manage challans
-router.use(authorize(['Admin', 'Sales']));
+// Define roles
+const readRoles = ['Admin', 'Sales', 'Accounts'];
+const writeRoles = ['Admin', 'Sales'];
 
-router.get('/', getChallans);
-router.get('/:id', getChallanById);
-router.post('/', validateRequest(createChallanSchema), createChallan);
-router.put('/:id', validateRequest(updateChallanSchema), updateChallan);
-router.post('/:id/confirm', confirmChallan);
-router.post('/:id/cancel', cancelChallan);
+router.get('/', authorize(readRoles), getChallans);
+router.get('/:id', authorize(readRoles), getChallanById);
+router.post('/', authorize(writeRoles), validateRequest(createChallanSchema), createChallan);
+router.put('/:id', authorize(writeRoles), validateRequest(updateChallanSchema), updateChallan);
+router.post('/:id/confirm', authorize(writeRoles), confirmChallan);
+router.post('/:id/cancel', authorize(writeRoles), cancelChallan);
 
 export default router;

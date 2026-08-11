@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
-import Navbar from '../../components/Navbar';
 import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react';
 
 export default function ChallanForm() {
@@ -85,11 +84,11 @@ export default function ChallanForm() {
     }
   };
 
-  if (loading) return <><Navbar/><div className="container" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading...</div></>;
+  if (loading) return <><div className="container" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading...</div></>;
 
   return (
     <>
-      <Navbar />
+
       <div className="container" style={{ maxWidth: '800px' }}>
         <Link to={isEdit ? `/challans/${id}` : '/challans'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: 'var(--text-muted)', textDecoration: 'none' }}>
           <ArrowLeft size={16} /> Back

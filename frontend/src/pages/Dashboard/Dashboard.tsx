@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import Navbar from '../../components/Navbar';
 import { Users, Package, FileText, AlertTriangle, ArrowRight } from 'lucide-react';
 
 export default function Dashboard() {
@@ -26,11 +25,11 @@ export default function Dashboard() {
     fetchSummary();
   }, []);
 
-  if (loading) return <><Navbar/><div className="container" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading...</div></>;
+  if (loading) return <><div className="container" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading...</div></>;
 
   return (
     <>
-      <Navbar />
+
       <div className="container">
         <h1 style={{ marginBottom: '0.5rem' }}>Welcome to Fundsroom ERP</h1>
         <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>You are logged in as <strong style={{ color: 'var(--primary)' }}>{role}</strong></p>

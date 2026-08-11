@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Auth/Login';
+import Unauthorized from './pages/Auth/Unauthorized';
 import CustomerList from './pages/Customers/CustomerList';
 import CustomerDetail from './pages/Customers/CustomerDetail';
 import ProductList from './pages/Inventory/ProductList';
@@ -10,11 +11,13 @@ import ChallanDetail from './pages/Sales/ChallanDetail';
 import ChallanForm from './pages/Sales/ChallanForm';
 import Dashboard from './pages/Dashboard/Dashboard';
 
+import Layout from './components/Layout';
+
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token');
   if (!token) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  return <Layout>{children}</Layout>;
 };
 
 // Role Based Route Guard
@@ -26,7 +29,7 @@ const RoleRoute = ({ children, allowedRoles }: { children: React.ReactNode, allo
   } catch (e) {}
 
   if (!allowedRoles.includes(role) && role !== 'Admin') {
-    return <Navigate to="/dashboard" replace />;
+    return <Unauthorized />;
   }
   return <>{children}</>;
 };
@@ -45,7 +48,7 @@ export default function App() {
         
         <Route path="/customers" element={
           <ProtectedRoute>
-            <RoleRoute allowedRoles={['Sales']}>
+            <RoleRoute allowedRoles={['Sales', 'Accounts']}>
               <CustomerList />
             </RoleRoute>
           </ProtectedRoute>
@@ -53,7 +56,7 @@ export default function App() {
         
         <Route path="/customers/:id" element={
           <ProtectedRoute>
-            <RoleRoute allowedRoles={['Sales']}>
+            <RoleRoute allowedRoles={['Sales', 'Accounts']}>
               <CustomerDetail />
             </RoleRoute>
           </ProtectedRoute>

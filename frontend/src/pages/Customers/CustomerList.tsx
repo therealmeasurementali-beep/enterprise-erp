@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import api from '../../services/api';
-import Navbar from '../../components/Navbar';
 import { Search, Plus, User, Building2 } from 'lucide-react';
 
 export default function CustomerList() {
@@ -94,7 +93,7 @@ export default function CustomerList() {
 
   return (
     <>
-      <Navbar />
+
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>

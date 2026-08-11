@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import api from '../../services/api';
-import Navbar from '../../components/Navbar';
 import { Search, Plus, Package, AlertTriangle, TrendingUp, Clock } from 'lucide-react';
 
 export default function ProductList() {
@@ -108,7 +107,7 @@ export default function ProductList() {
 
   return (
     <>
-      <Navbar />
+
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
@@ -116,7 +115,7 @@ export default function ProductList() {
             <p style={{ color: 'var(--text-muted)' }}>Manage products and stock movements</p>
           </div>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <Link to="/stock-history" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+            <Link to="/inventory/history" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
               <Clock size={16} /> View History
             </Link>
             <button className="btn" onClick={openAddModal} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

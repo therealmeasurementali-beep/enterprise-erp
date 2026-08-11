@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import Navbar from '../../components/Navbar';
 import { Search, Plus, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function ChallanList() {
@@ -47,7 +46,7 @@ export default function ChallanList() {
 
   return (
     <>
-      <Navbar />
+
       <div className="container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import Navbar from '../../components/Navbar';
 import { ArrowLeft, ArrowUpRight, ArrowDownRight, Clock } from 'lucide-react';
 
 export default function StockMovementHistory() {
@@ -32,7 +31,7 @@ export default function StockMovementHistory() {
 
   return (
     <>
-      <Navbar />
+
       <div className="container">
         <Link to="/products" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: 'var(--text-muted)' }}>
           <ArrowLeft size={16} /> Back to Inventory

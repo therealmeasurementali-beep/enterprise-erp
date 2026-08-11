@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
-import Navbar from '../../components/Navbar';
 import { ArrowLeft, Edit2, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 export default function ChallanDetail() {
@@ -43,13 +42,13 @@ export default function ChallanDetail() {
     }
   };
 
-  if (loading) return <><Navbar/><div className="container" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading...</div></>;
-  if (error && !challan) return <><Navbar/><div className="container" style={{ color: 'var(--danger)', padding: '2rem' }}>{error}</div></>;
+  if (loading) return <><div className="container" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading...</div></>;
+  if (error && !challan) return <><div className="container" style={{ color: 'var(--danger)', padding: '2rem' }}>{error}</div></>;
   if (!challan) return null;
 
   return (
     <>
-      <Navbar />
+
       <div className="container">
         <Link to="/challans" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: 'var(--text-muted)', textDecoration: 'none' }}>
           <ArrowLeft size={16} /> Back to Sales

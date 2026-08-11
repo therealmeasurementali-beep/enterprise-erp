@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
-import Navbar from '../../components/Navbar';
 import { ArrowLeft, Phone, Mail, Building2, Calendar, FileText } from 'lucide-react';
 
 export default function CustomerDetail() {
@@ -94,7 +93,7 @@ export default function CustomerDetail() {
 
   return (
     <>
-      <Navbar />
+
       <div className="container">
         <Link to="/customers" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: 'var(--text-muted)' }}>
           <ArrowLeft size={16} /> Back to Customers
