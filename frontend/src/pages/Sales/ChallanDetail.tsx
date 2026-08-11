@@ -42,13 +42,198 @@ export default function ChallanDetail() {
     }
   };
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleDownloadPDF = async (print = false) => {
+    if (!challan) return;
+    setPdfLoading(true);
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      const margin = 18;
+
+      // ── Header ──────────────────────────────────────────────────
+      doc.setFillColor(30, 30, 46);
+      doc.rect(0, 0, pageW, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FUNDSROOM', margin, 12);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Mini ERP & CRM Operations Portal', margin, 19);
+
+      // Status badge (top-right)
+      const statusColors: Record<string, [number, number, number]> = {
+        Draft:     [100, 100, 120],
+        Confirmed: [34,  197,  94],
+        Cancelled: [239,  68,  68],
+      };
+      const [sr, sg, sb] = statusColors[challan.status] || [100, 100, 120];
+      doc.setFillColor(sr, sg, sb);
+      doc.roundedRect(pageW - margin - 30, 8, 30, 10, 2, 2, 'F');
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(challan.status.toUpperCase(), pageW - margin - 15, 14.5, { align: 'center' });
+
+      // Title
+      doc.setTextColor(30, 30, 46);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SALES CHALLAN', margin, 40);
+
+      // Horizontal rule
+      doc.setDrawColor(200, 200, 210);
+      doc.setLineWidth(0.4);
+      doc.line(margin, 43, pageW - margin, 43);
+
+      // ── Challan Meta ─────────────────────────────────────────────
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 100);
+      doc.text('Challan Number', margin, 52);
+      doc.text('Date', 90, 52);
+      doc.text('Created By', 145, 52);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(20, 20, 40);
+      doc.setFontSize(10.5);
+      doc.text(challan.challanNumber, margin, 58);
+      doc.text(new Date(challan.createdDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), 90, 58);
+      doc.text(challan.user?.name || '-', 145, 58);
+
+      // ── Customer Section ─────────────────────────────────────────
+      doc.setFillColor(245, 245, 252);
+      doc.rect(margin, 66, pageW - margin * 2, 40, 'F');
+      doc.setDrawColor(210, 210, 225);
+      doc.rect(margin, 66, pageW - margin * 2, 40, 'S');
+
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 100, 130);
+      doc.text('BILL TO', margin + 4, 73);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(20, 20, 40);
+      doc.text(challan.customer?.name || '-', margin + 4, 80);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(60, 60, 80);
+      let custY = 86;
+      const addCustLine = (label: string, value: string | undefined) => {
+        if (!value) return;
+        doc.setFont('helvetica', 'bold'); doc.text(`${label}:`, margin + 4, custY);
+        doc.setFont('helvetica', 'normal'); doc.text(value, margin + 30, custY);
+        custY += 5.5;
+      };
+      addCustLine('Business', challan.customer?.businessName);
+      addCustLine('Mobile',   challan.customer?.mobile);
+      addCustLine('Email',    challan.customer?.email);
+      addCustLine('GST No',   challan.customer?.gstNumber);
+      addCustLine('Address',  challan.customer?.address);
+
+      // ── Products Table ───────────────────────────────────────────
+      const tableStartY = 114;
+      const totalAmount = challan.items.reduce(
+        (sum: number, item: any) => sum + item.unitPriceSnapshot * item.quantity, 0
+      );
+
+      autoTable(doc, {
+        startY: tableStartY,
+        margin: { left: margin, right: margin },
+        head: [['#', 'Product Name', 'SKU', 'Qty', 'Unit Price (INR)', 'Total (INR)']],
+        body: challan.items.map((item: any, idx: number) => [
+          idx + 1,
+          item.productNameSnapshot,
+          item.skuSnapshot,
+          item.quantity,
+          item.unitPriceSnapshot.toFixed(2),
+          (item.unitPriceSnapshot * item.quantity).toFixed(2),
+        ]),
+        styles: {
+          fontSize: 9,
+          cellPadding: 3.5,
+          textColor: [30, 30, 50],
+          lineColor: [210, 210, 225],
+          lineWidth: 0.3,
+        },
+        headStyles: {
+          fillColor: [30, 30, 46],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9,
+        },
+        alternateRowStyles: { fillColor: [248, 248, 255] },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 10 },
+          3: { halign: 'center', cellWidth: 14 },
+          4: { halign: 'right', cellWidth: 32 },
+          5: { halign: 'right', cellWidth: 32 },
+        },
+      });
+
+      // ── Totals ───────────────────────────────────────────────────
+      const finalY = (doc as any).lastAutoTable.finalY + 6;
+      doc.setDrawColor(210, 210, 225);
+      doc.line(pageW - margin - 80, finalY, pageW - margin, finalY);
+
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 80);
+      doc.text('Total Quantity:', pageW - margin - 80, finalY + 7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(20, 20, 40);
+      doc.text(String(challan.totalQuantity), pageW - margin, finalY + 7, { align: 'right' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 80);
+      doc.text('Total Amount:', pageW - margin - 80, finalY + 14);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(30, 30, 46);
+      doc.text(`INR ${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, pageW - margin, finalY + 14, { align: 'right' });
+
+      // ── Footer ───────────────────────────────────────────────────
+      const pageH = doc.internal.pageSize.getHeight();
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setDrawColor(200, 200, 210);
+        doc.line(margin, pageH - 18, pageW - margin, pageH - 18);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(140, 140, 160);
+        doc.text('This is a system-generated document from Fundsroom ERP. No signature required.', margin, pageH - 12);
+        doc.text(`Page ${p} of ${totalPages}`, pageW - margin, pageH - 12, { align: 'right' });
+      }
+
+      // ── Output ───────────────────────────────────────────────────
+      if (print) {
+        doc.autoPrint();
+        doc.output('dataurlnewwindow');
+      } else {
+        doc.save(`${challan.challanNumber}.pdf`);
+      }
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      setError('Failed to generate PDF. Please try again.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   if (loading) return <><div className="container" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading...</div></>;
   if (error && !challan) return <><div className="container" style={{ color: 'var(--danger)', padding: '2rem' }}>{error}</div></>;
   if (!challan) return null;
 
   return (
     <>
-
       <div className="container">
         <Link to="/challans" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: 'var(--text-muted)', textDecoration: 'none' }}>
           <ArrowLeft size={16} /> Back to Sales
@@ -68,7 +253,36 @@ export default function ChallanDetail() {
               <p style={{ color: 'var(--text-muted)' }}>Created on {new Date(challan.createdDate).toLocaleString()} by {challan.user.name}</p>
             </div>
             
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => handleDownloadPDF(false)}
+                disabled={pdfLoading}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: pdfLoading ? 0.7 : 1 }}
+                title="Download this challan as a PDF file"
+              >
+                {pdfLoading ? (
+                  <span style={{ width: '16px', height: '16px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                )}
+                {pdfLoading ? 'Generating...' : 'Download PDF'}
+              </button>
+              <button
+                onClick={() => handleDownloadPDF(true)}
+                disabled={pdfLoading}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: pdfLoading ? 0.7 : 1 }}
+                title="Open print dialog for this challan"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                Print
+              </button>
+
               {challan.status === 'Draft' && (
                 <>
                   <Link to={`/challans/${challan.id}/edit`} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
@@ -123,6 +337,7 @@ export default function ChallanDetail() {
             </tbody>
           </table>
         </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </>
   );
