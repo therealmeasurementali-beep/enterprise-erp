@@ -29,7 +29,7 @@ export const getChallans = async (req: AuthRequest, res: Response): Promise<void
 
 export const getChallanById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const challan = await prisma.salesChallan.findUnique({
       where: { id },
       include: {
@@ -105,7 +105,7 @@ export const createChallan = async (req: AuthRequest, res: Response): Promise<vo
 
 export const updateChallan = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { customerId, items } = req.body;
 
     const existingChallan = await prisma.salesChallan.findUnique({ where: { id } });
@@ -165,7 +165,7 @@ export const updateChallan = async (req: AuthRequest, res: Response): Promise<vo
 
 export const cancelChallan = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const existingChallan = await prisma.salesChallan.findUnique({ where: { id } });
     if (!existingChallan) {
@@ -191,7 +191,7 @@ export const cancelChallan = async (req: AuthRequest, res: Response): Promise<vo
 
 export const confirmChallan = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
 
     const result = await prisma.$transaction(async (tx: any) => {
