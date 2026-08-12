@@ -6,13 +6,14 @@ import { productSchema, updateProductSchema } from '../validators/productValidat
 
 const router = Router();
 
-// Inventory RBAC: Admin and Warehouse allowed. Sales and Accounts denied.
-const inventoryRoles = ['Admin', 'Warehouse'];
+// Inventory RBAC: Read allowed for Admin, Warehouse, Sales. Write allowed for Admin and Warehouse only.
+const readRoles = ['Admin', 'Warehouse', 'Sales'];
+const writeRoles = ['Admin', 'Warehouse'];
 
-router.get('/', auth, authorize(inventoryRoles), getProducts);
-router.get('/:id', auth, authorize(inventoryRoles), getProductById);
-router.post('/', auth, authorize(inventoryRoles), validateRequest(productSchema), createProduct);
-router.put('/:id', auth, authorize(inventoryRoles), validateRequest(updateProductSchema), updateProduct);
-router.delete('/:id', auth, authorize(inventoryRoles), deleteProduct);
+router.get('/', auth, authorize(readRoles), getProducts);
+router.get('/:id', auth, authorize(readRoles), getProductById);
+router.post('/', auth, authorize(writeRoles), validateRequest(productSchema), createProduct);
+router.put('/:id', auth, authorize(writeRoles), validateRequest(updateProductSchema), updateProduct);
+router.delete('/:id', auth, authorize(writeRoles), deleteProduct);
 
 export default router;
