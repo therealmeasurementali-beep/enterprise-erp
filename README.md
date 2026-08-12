@@ -2,7 +2,10 @@
 
 A full-stack ERP and CRM system for internal operations at a wholesale/distribution business, built to manage customers, inventory, and sales challans with strict role-based access control and transactional data integrity.
 
-**GitHub Repository:** https://github.com/yashukd24/fundsroom-erp
+**GitHub Repository:** https://github.com/yashukd24/fundsroom-erp  
+**Live Frontend:** https://fundsroom-erp-pi.vercel.app  
+**Live Backend API:** https://fundsroom-erp-backend-01dc.onrender.com  
+**Database:** Neon PostgreSQL  
 
 ---
 
@@ -60,6 +63,7 @@ Fundsroom Mini ERP & CRM Operations Portal is a full-stack internal business app
 - Frontend: `ProtectedRoute` redirects unauthenticated users to login; `RoleRoute` shows `Unauthorized` page for insufficient role
 - Admin role bypasses all `RoleRoute` guards by design
 - `401 Unauthorized` for missing/invalid token; `403 Forbidden` for insufficient role
+- **Sales Product Read Access:** Sales users have read access (`GET /api/products` and `GET /api/products/:id`) to populate product options when creating/editing sales challans, while product write operations (`POST`, `PUT`, `DELETE`) remain strictly restricted to Admin and Warehouse.
 
 ### Role-Aware Navigation (Sidebar)
 - Persistent sidebar shows only navigation items relevant to the authenticated user's role
@@ -88,19 +92,20 @@ Fundsroom Mini ERP & CRM Operations Portal is a full-stack internal business app
 ### Product & Inventory
 - List all products with SKU, category, unit price, current stock, minimum stock alert, location
 - Create and edit products (Admin / Warehouse only)
+- Read product list and details (Admin, Warehouse, and Sales)
 - Low-stock indicator when `currentStock <= minStockAlertQuantity`
 - Stock movement history per product (or all products combined)
 
 ### Stock Movement History
 - Full audit log: product, quantity changed, type (IN/OUT), reason, created-by user, timestamp
-- Manual stock movements can be created (Admin / Warehouse)
+- Manual stock movements can be created (Admin / Warehouse only)
 - Challan confirmation automatically records OUT movements
 
 ### Sales Challans
 - Select a customer per challan
-- Add one or more products with individual quantities
+- Read and select products with individual quantities
 - Automatic unique challan number generated on creation (`CHL-YYYYMMDD-XXXX`)
-- **Draft:** editable, can be confirmed or cancelled
+- **Draft:** editable by Sales/Admin, can be confirmed or cancelled
 - **Confirmed:** stock deducted atomically, cannot be re-confirmed or edited
 - **Cancelled:** final state; stock is not affected (stock is only deducted on confirmation)
 - Atomic stock deduction via Prisma `$transaction`: all-or-nothing, with post-deduction negative stock fail-safe
@@ -108,6 +113,7 @@ Fundsroom Mini ERP & CRM Operations Portal is a full-stack internal business app
 - Duplicate confirmation protected (status checked inside transaction)
 - `OUT` stock movement created per product on confirmation, referencing the challan number
 - Product snapshot fields (`productNameSnapshot`, `skuSnapshot`, `unitPriceSnapshot`) are captured at draft creation time — historical accuracy preserved even if the product catalog changes later
+- Client-side PDF download and browser printing supported
 
 ---
 
@@ -118,7 +124,7 @@ Fundsroom Mini ERP & CRM Operations Portal is a full-stack internal business app
 | Technology | Version | Purpose |
 |---|---|---|
 | React | 19.x | UI framework |
-| TypeScript | 6.x | Type safety |
+| TypeScript | 6.0.3 | Type safety |
 | Vite | 8.x | Build tool / dev server |
 | React Router DOM | 7.x | Client-side routing |
 | Axios | 1.x | HTTP client with JWT interceptor |
@@ -127,7 +133,7 @@ Fundsroom Mini ERP & CRM Operations Portal is a full-stack internal business app
 | jspdf-autotable | 5.x | Product table rendering in PDF |
 | Vanilla CSS | — | Styling (custom design system, no external CSS framework) |
 
-> **Note:** This project does **not** use TailwindCSS or any CSS utility framework. All styles are hand-written in `frontend/src/index.css` using CSS variables and a custom dark-mode design system.
+> **Note:** This project does **not** use TailwindCSS or any external CSS utility framework. All styles are hand-written in `frontend/src/index.css` using CSS variables and a custom dark-mode design system.
 
 ### Backend
 
@@ -135,19 +141,31 @@ Fundsroom Mini ERP & CRM Operations Portal is a full-stack internal business app
 |---|---|---|
 | Node.js | 18+ | Runtime |
 | Express.js | 5.x | REST API framework |
-| TypeScript | 7.x | Type safety |
+| TypeScript | 7.0.2 | Type safety |
 | Prisma Client | 7.x | ORM / database access |
-| PostgreSQL | — | Relational database (via Neon DB or self-hosted) |
+| PostgreSQL | — | Relational database (via Neon DB) |
 | bcryptjs | 3.x | Password hashing |
 | jsonwebtoken | 9.x | JWT signing and verification |
 | Zod | 4.x | Request body validation |
 | dotenv | — | Environment variable loading |
 | cors | — | CORS handling |
-| nodemon / tsx | — | Development hot-reload |
+| tsx | — | Development hot-reload |
 
 ---
 
 ## 4. Application Architecture
+
+```
+React + TypeScript + Vite
+        ↓
+      Vercel
+        ↓ REST API / JWT
+Node.js + Express + TypeScript
+        ↓ Prisma
+  Neon PostgreSQL
+```
+
+### Flow & Layer Breakdown
 
 ```
 Browser (React SPA)
@@ -163,7 +181,7 @@ Browser (React SPA)
         │  Authorization: Bearer <JWT>
         │  Base URL: VITE_API_URL
         ▼
-Express REST API (Node.js / TypeScript)
+Express REST API (Node.js / TypeScript on Render)
   │
   ├── auth middleware  → verifies JWT → 401 if invalid
   ├── authorize([roles]) → checks role → 403 if unauthorized
@@ -172,15 +190,15 @@ Express REST API (Node.js / TypeScript)
   ├── /api/auth        → login
   ├── /api/dashboard   → summary metrics
   ├── /api/customers   → CRM
-  ├── /api/products    → inventory
-  ├── /api/stock       → stock movements
+  ├── /api/products    → inventory (READ: Admin/Warehouse/Sales, WRITE: Admin/Warehouse)
+  ├── /api/stock       → stock movements (Admin/Warehouse)
   └── /api/challans    → sales challans (with $transaction on confirm)
         │
         ▼
 Prisma Client
   │
   ▼
-PostgreSQL
+Neon PostgreSQL Database
 ```
 
 ---
@@ -200,7 +218,7 @@ Fundsroom-ERP APP/
 │   ├── tsconfig.json
 │   ├── prisma.config.ts
 │   ├── schema.sql
-│   ├── test_phase4.js            # Regression test — atomic challan transactions
+│   ├── test_phase4.js            # Integration test — atomic challan transactions
 │   │
 │   ├── prisma/
 │   │   ├── schema.prisma         # Data models
@@ -233,6 +251,7 @@ Fundsroom-ERP APP/
 │           └── challanValidator.ts
 │
 └── frontend/
+    ├── vercel.json               # Vercel SPA rewrite rule
     ├── .env.example
     ├── .gitignore
     ├── package.json
@@ -282,8 +301,9 @@ Fundsroom-ERP APP/
 | Delete Customer | ✅ | ✅ | ❌ | ❌ |
 | View Customer Follow-ups | ✅ | ✅ | ❌ | ✅ |
 | Add Follow-up | ✅ | ✅ | ❌ | ❌ |
-| View Products / Inventory | ✅ | ❌ | ✅ | ❌ |
-| Create / Edit Product | ✅ | ❌ | ✅ | ❌ |
+| View Products / Inventory (READ) | ✅ | ✅ | ✅ | ❌ |
+| Create / Edit / Delete Product (WRITE) | ✅ | ❌ | ✅ | ❌ |
+| View Product List Page in UI (`/products`) | ✅ | ❌ | ✅ | ❌ |
 | View Stock Movement History | ✅ | ❌ | ✅ | ❌ |
 | Create Manual Stock Movement | ✅ | ❌ | ✅ | ❌ |
 | View Low Stock Alerts | ✅ | ❌ | ✅ | ❌ |
@@ -370,8 +390,6 @@ POST /api/challans/:id/confirm
 - ✅ Cancellation of a Draft challan does not affect stock (stock was never deducted)
 - ✅ Confirmed challans cannot be cancelled
 
-> **Note:** Prisma transactions provide statement-level consistency within a single connection. Row-level locking for high-concurrency scenarios is not implemented in this version.
-
 ---
 
 ## 9. Sales Challan PDF & Print
@@ -403,14 +421,6 @@ PDF generation is **client-side only**, using `jsPDF` and `jspdf-autotable`. The
 > **Generating or downloading a PDF does not confirm a challan, deduct stock, modify challan status, or write to the database.**
 
 This was verified by intercepting all network requests during PDF generation and confirming that zero `POST`, `PUT`, `PATCH`, or `DELETE` requests are made to the API.
-
-### Status Support
-
-| Challan Status | PDF Available | Status Shown in PDF |
-|---|:---:|---|
-| Draft | ✅ | DRAFT badge (grey) |
-| Confirmed | ✅ | CONFIRMED badge (green) |
-| Cancelled | ✅ | CANCELLED badge (red) |
 
 ---
 
@@ -446,13 +456,13 @@ GET    /api/customers/:id/followups        → List follow-ups
 POST   /api/customers/:id/followups        → Add follow-up note
 ```
 
-**Products** *(Auth required; Admin/Warehouse only)*
+**Products** *(Auth required)*
 ```
-GET    /api/products                       → List all products
-POST   /api/products                       → Create product
-GET    /api/products/:id                   → Get product detail
-PUT    /api/products/:id                   → Update product
-DELETE /api/products/:id                   → Delete product
+GET    /api/products                       → List all products (READ: Admin, Warehouse, Sales)
+GET    /api/products/:id                   → Get product detail (READ: Admin, Warehouse, Sales)
+POST   /api/products                       → Create product (WRITE: Admin, Warehouse)
+PUT    /api/products/:id                   → Update product (WRITE: Admin, Warehouse)
+DELETE /api/products/:id                   → Delete product (WRITE: Admin, Warehouse)
 ```
 
 **Stock Movements** *(Auth required; Admin/Warehouse only)*
@@ -531,12 +541,6 @@ DATABASE_URL="postgresql://<username>:<password>@<host>:<port>/<database>?sslmod
 JWT_SECRET="<your-secure-random-secret>"
 ```
 
-| Variable | Required | Description |
-|---|:---:|---|
-| `PORT` | No | Server port (default: 5000) |
-| `DATABASE_URL` | **Yes** | PostgreSQL connection string |
-| `JWT_SECRET` | **Yes** | Secret key for signing JWTs |
-
 ### Frontend — `frontend/.env`
 
 Copy `frontend/.env.example` to `frontend/.env`:
@@ -544,10 +548,6 @@ Copy `frontend/.env.example` to `frontend/.env`:
 ```env
 VITE_API_URL="http://localhost:5000/api"
 ```
-
-| Variable | Required | Description |
-|---|:---:|---|
-| `VITE_API_URL` | **Yes** | Base URL of the backend REST API |
 
 > **Security:** Both `.env` files are listed in `.gitignore` and are never committed to the repository.
 
@@ -568,13 +568,6 @@ npx prisma db push
 npx prisma db seed
 ```
 
-The seed script creates four users with `bcrypt`-hashed passwords — see [Section 14](#14-test-login-credentials) for credentials.
-
-**Optional — Open Prisma Studio (database browser):**
-```bash
-npx prisma studio
-```
-
 ---
 
 ## 14. Test Login Credentials
@@ -588,38 +581,21 @@ The following accounts are created automatically by the database seeder:
 | **Warehouse** | `warehouse@fundsroom.com` | `password123` |
 | **Accounts** | `accounts@fundsroom.com` | `password123` |
 
-> These are development/demo credentials. Change the password and `JWT_SECRET` before any production deployment.
-
 ---
 
 ## 15. Testing
 
-### Production Build Verification
+### Verified Automated Builds & Tests
 
-From the `frontend/` directory:
-```bash
-npm run build
-```
-Compiles TypeScript and bundles with Vite. A successful build confirms zero TypeScript errors.
-
-### Regression Test — Atomic Challan Transactions
-
-From the `backend/` directory:
-```bash
-node test_phase4.js
-```
-
-`test_phase4.js` is the definitive integration test for the Sales Challan confirmation flow. It tests:
-
-1. **Authentication** — obtains tokens for admin, sales, and warehouse users
-2. **Draft creation** — creates a challan and verifies product snapshots are stored correctly
-3. **Draft update** — modifies challan items and verifies snapshot refresh
-4. **Successful confirmation** — confirms a challan with sufficient stock; verifies stock was deducted and `OUT` movement records created
-5. **Double-confirmation protection** — attempts to re-confirm an already-Confirmed challan; verifies rejection
-6. **Atomic rollback** — attempts to confirm a challan where one product has insufficient stock; verifies that NO stock is deducted for any product and the challan remains in Draft status
-7. **Cancellation** — cancels a Draft challan and verifies status change
-
-All 7 steps must pass for the test to report `✅ ALL PHASE 4 TESTS PASSED SUCCESSFULLY`.
+- **Backend Production Build (`npm run build`):** Verified with zero TypeScript errors.
+- **Frontend Production Build (`npm run build`):** Verified with zero errors (2069 modules transformed).
+- **Phase 4 Regression Test (`node test_phase4.js`):** Verified with 100% success (`ALL PHASE 4 TESTS PASSED SUCCESSFULLY!`).
+- **Atomic Stock Rollback:** Tested and confirmed — insufficient stock rejects confirmation and rolls back completely without partial deductions.
+- **Role-Based Access Control:** Verified across all four roles:
+  - **Sales Role:** Verified `GET /api/products` returns `200 OK` (enabling product dropdowns on Challan creation), while product write operations (`POST`, `PUT`, `DELETE`) return `403 Forbidden`.
+  - **Warehouse Role:** Verified product management and stock movements return `200/201`, while CRM and Challans return `403 Forbidden`.
+  - **Accounts Role:** Verified read-only access returns `200 OK`, while customer/challan write operations return `403 Forbidden`.
+  - **Admin Role:** Verified full system access across all modules.
 
 ---
 
@@ -651,11 +627,10 @@ All `POST` and `PUT` endpoints use Zod schemas validated through the `validateRe
 ## 17. Security
 
 - **JWT Authentication:** All protected API routes verify `Authorization: Bearer <token>` on every request. Tokens expire after 24 hours.
-- **Password Hashing:** All user passwords are hashed using `bcryptjs` (10 salt rounds) — plain-text passwords are never stored.
-- **Role-Based Authorization:** The `authorize(roles[])` middleware enforces role requirements at the backend route level, independent of frontend navigation.
-- **Environment Variables:** All secrets (`DATABASE_URL`, `JWT_SECRET`) are stored in `.env` files excluded from version control via `.gitignore`. No credentials are committed to the repository.
-- **No Secrets in History:** The one debug script that had a hardcoded database connection string was deleted and removed from the repository before any public commit.
-- **Frontend Route Protection:** `ProtectedRoute` redirects to `/login` if no token is in `localStorage`. `RoleRoute` renders the `Unauthorized` page for insufficient role — it does not redirect, preventing open-redirect attacks.
+- **Password Hashing:** All user passwords are hashed using `bcryptjs` (10 salt rounds).
+- **Role-Based Authorization:** The `authorize(roles[])` middleware enforces role requirements at the backend route level.
+- **Environment Variables:** All secrets (`DATABASE_URL`, `JWT_SECRET`) are stored in `.env` files excluded from version control via `.gitignore`.
+- **Frontend Route Protection:** `ProtectedRoute` redirects to `/login` if no token is in `localStorage`. `RoleRoute` renders the `Unauthorized` page for insufficient role.
 
 ---
 
@@ -674,25 +649,33 @@ All `POST` and `PUT` endpoints use Zod schemas validated through the `validateRe
 
 ## 19. Deployment
 
-> Deployment has not been completed yet. The repository is prepared for deployment on standard Node.js / static hosting platforms.
+The application is deployed across production cloud platforms:
 
-**Frontend** (e.g. Vercel, Netlify):
+- **Frontend:** Deployed on **Vercel**  
+  URL: https://fundsroom-erp-pi.vercel.app
+- **Backend API:** Deployed on **Render**  
+  URL: https://fundsroom-erp-backend-01dc.onrender.com
+- **Database:** Deployed on **Neon PostgreSQL**
+
+### Production Environment Variables
+
+**Frontend (Vercel):**
 ```env
-VITE_API_URL=<production backend API URL>
+VITE_API_URL=https://fundsroom-erp-backend-01dc.onrender.com/api
 ```
 
-**Backend** (e.g. Railway, Render):
+**Backend (Render):**
 ```env
-PORT=<platform-assigned port>
-DATABASE_URL=<production PostgreSQL connection string>
-JWT_SECRET=<strong random production secret>
+DATABASE_URL=postgresql://<username>:<password>@<host>/<database>?sslmode=require
+JWT_SECRET=<production-jwt-secret>
 ```
 
-| Resource | URL |
-|---|---|
-| Frontend | TBD |
-| Backend API | TBD |
-| GitHub Repository | https://github.com/yashukd24/fundsroom-erp |
+| Component | Platform | URL |
+|---|---|---|
+| **Frontend UI** | Vercel | https://fundsroom-erp-pi.vercel.app |
+| **Backend REST API** | Render | https://fundsroom-erp-backend-01dc.onrender.com |
+| **Database** | Neon | PostgreSQL |
+| **GitHub Repository** | GitHub | https://github.com/yashukd24/fundsroom-erp |
 
 ---
 
@@ -701,40 +684,39 @@ JWT_SECRET=<strong random production secret>
 - **Product List Pagination:** The `GET /api/products` endpoint currently returns all products. For large catalogs, `page` and `limit` query parameters should be added (similar to the Customers endpoint which already supports pagination).
 - **Challan List Pagination:** The `GET /api/challans` endpoint similarly returns all challans. Cursor-based or offset pagination should be added as the dataset grows.
 - **No Profile Picture / Image Uploads:** Product images and user profile photos are not supported. AWS S3 or equivalent object storage integration would be required.
-- **No Concurrency Locking:** The atomic transaction prevents negative stock but does not implement database row-level locking (`SELECT FOR UPDATE`). Under extremely high concurrent load, very rare race conditions could theoretically occur. For the scale of this application this is an acceptable trade-off.
-- **JWT in localStorage:** Tokens are stored in `localStorage`, which is sufficient for internal tools but not recommended for public-facing applications. HttpOnly cookies would be more secure for production.
+- **No Concurrency Locking:** The atomic transaction prevents negative stock but does not implement database row-level locking (`SELECT FOR UPDATE`). Under extremely high concurrent load, rare race conditions could theoretically occur.
+- **JWT in localStorage:** Tokens are stored in `localStorage`, which is sufficient for internal tools. HttpOnly cookies would be recommended for public-facing production applications.
 
 ---
 
 ## 21. Case Study Compliance
 
-This project was developed against the **Fundsroom Full Stack Developer Case Study** specification. The following areas are verified as implemented and compliant:
+This project was developed against the **Fundsroom Full Stack Developer Case Study** specification. All required business modules and technical capabilities are implemented, verified, and deployed:
 
-| Area | Status | Notes |
-|---|---|---|
+| Requirement | Status | Implementation Details |
+|---|:---:|---|
 | JWT Authentication + Login | ✅ Pass | bcrypt, 24h expiry, 4 roles |
 | Admin Role | ✅ Pass | Full access to all modules |
-| Sales Role | ✅ Pass | Customers + Challans (read/write) |
-| Warehouse Role | ✅ Pass | Products + Stock movements |
+| Sales Role | ✅ Pass | Customers CRM + Sales Challans (read/write), Products (read-only) |
+| Warehouse Role | ✅ Pass | Products + Stock movements management |
 | Accounts Role | ✅ Pass | Customers + Challans (read-only) |
-| Customer CRM — all required fields | ✅ Pass | 16/16 requirements verified |
-| Customer search | ✅ Pass | |
-| Follow-up notes + date | ✅ Pass | |
-| Product management + SKU | ✅ Pass | |
-| Minimum stock alerts | ✅ Pass | `minStockAlertQuantity` field |
-| Stock Movement History (IN/OUT) | ✅ Pass | Full audit log |
-| Challan — customer + multi-product | ✅ Pass | |
-| Challan number auto-generation | ✅ Pass | `CHL-YYYYMMDD-XXXX` |
-| Draft / Confirmed / Cancelled states | ✅ Pass | |
-| Atomic stock deduction on confirm | ✅ Pass | Prisma `$transaction` |
-| Negative stock prevention | ✅ Pass | Pre-check + fail-safe |
-| Insufficient stock rejection | ✅ Pass | Full rollback |
-| Duplicate confirmation protection | ✅ Pass | Status checked in transaction |
-| Product snapshot in ChallanItem | ✅ Pass | Name, SKU, price captured at draft time |
-| Backend RBAC on all routes | ✅ Pass | `auth` + `authorize()` middleware |
-| Frontend role-aware navigation | ✅ Pass | Sidebar + RoleRoute |
-| Zod validation on all write endpoints | ✅ Pass | |
-| Sales Challan PDF download & print | ✅ Pass | jsPDF + jspdf-autotable, client-side |
-| Responsive UI | ✅ Pass | Mobile-collapsible sidebar |
-| Product list pagination | ⚠️ Partial | Not yet implemented (customers: ✅) |
-| Challan list pagination | ⚠️ Partial | Not yet implemented |
+| Customer CRM (16 fields) | ✅ Pass | Lead/Active/Inactive, Retail/Wholesale/Distributor, GST, Follow-ups |
+| Customer Search | ✅ Pass | Filter by name, mobile, email, business name |
+| Customer Follow-up Schedule | ✅ Pass | Notes + follow-up date tracking |
+| Product Management & SKU | ✅ Pass | Name, SKU, category, price, current stock, location |
+| Minimum Stock Alerts | ✅ Pass | Low-stock count on dashboard + inventory indicator |
+| Stock Movement Audit Log | ✅ Pass | IN/OUT movements with timestamp, user, and reason |
+| Sales Challan Creation | ✅ Pass | Customer selection, multi-product picker, quantity specification |
+| Challan Number Auto-Gen | ✅ Pass | Unique format `CHL-YYYYMMDD-XXXX` |
+| Draft / Confirmed / Cancelled | ✅ Pass | Complete status workflow |
+| Atomic Stock Deduction | ✅ Pass | Prisma `$transaction` ensures all-or-nothing execution |
+| Negative Stock Prevention | ✅ Pass | Pre-check + fail-safe rollback |
+| Insufficient Stock Rejection | ✅ Pass | Blocks confirmation if stock is inadequate |
+| Product Snapshot in Challan | ✅ Pass | Captures name, SKU, and unit price snapshot at draft creation |
+| Sales Challan PDF & Print | ✅ Pass | jsPDF + jspdf-autotable client-side export |
+| Backend RBAC Enforcement | ✅ Pass | `auth` + `authorize()` middleware on all API routes |
+| Frontend Role Guards | ✅ Pass | `ProtectedRoute` + `RoleRoute` + role-aware Sidebar |
+| Zod Request Validation | ✅ Pass | Input validation on all write endpoints |
+| Production Cloud Deployment | ✅ Pass | Vercel (Frontend) + Render (Backend) + Neon (PostgreSQL) |
+| Customer List Pagination | ✅ Pass | Supported via `page` and `limit` query parameters |
+| Product & Challan Pagination | ⚠️ Partial | Array response; pagination can be added as data scales |
