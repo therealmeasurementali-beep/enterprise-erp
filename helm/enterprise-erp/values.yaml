@@ -1,0 +1,60 @@
+frontend:
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/therealmeasurementali-beep/enterprise-erp/frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+
+
+backend:
+  replicaCount: 2
+
+  image:
+    repository: ghcr.io/therealmeasurementali-beep/enterprise-erp/backend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+
+
+ingress:
+  enabled: true
+
+  className: nginx
+
+  host: erp.example.com
+
+  annotations: {}
+
+  tls:
+    enabled: false
+    secretName: enterprise-erp-tls
+
+
+resources:
+  frontend:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  backend:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+    limits:
+      cpu: 1000m
+      memory: 1Gi
