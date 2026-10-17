@@ -1,0 +1,28 @@
+@'
+name: Secret Scanning
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gitleaks:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Scan for leaked secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+'@ | Set-Content -Path .\.github\workflows\gitleaks.yml -Encoding utf8
